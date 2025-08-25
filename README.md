@@ -32,7 +32,7 @@ A simple yet powerful **Group Goals Tracker** 🎯 that allows multiple people t
 
 ---
 
-## ✨ Cloning
+## 🔃 Cloning
 1. Just take the HTML file, its included with css and javascript within.
 2. Go to [website](https://www.npoint.io/) , and create a new json bin.
 3. Copy the endpoint of the json bin.
