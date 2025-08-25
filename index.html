@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Goals Tracker</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #f8f9fa, #dbeafe);
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .container {
+      display: flex;
+      gap: 30px;
+      width: 100%;
+      max-width: 1100px;
+    }
+
+    .goal-box {
+      background: white;
+      padding: 30px 40px;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      flex: 1;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+      color: #2563eb;
+    }
+
+    form {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    input {
+      padding: 10px;
+      border-radius: 8px;
+      border: 2px solid #d1d5db;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: #2563eb;
+    }
+
+    button {
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    li {
+      background: #f1f5f9;
+      margin: 10px 0;
+      padding: 12px;
+      border-radius: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    li button {
+      background-color: #ef4444;
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Group Goals -->
+    <div class="goal-box">
+      <h1>👥 Group Goals</h1>
+      <form id="groupGoalForm">
+        <input type="text" id="groupGoalInput" placeholder="Add group goal..." required />
+        <input type="date" id="groupDeadlineInput" required />
+        <button type="submit">Add</button>
+      </form>
+      <ul id="groupGoalList"></ul>
+    </div>
+
+    <!-- Personal Goals -->
+    <div class="goal-box">
+      <h1>💼 Personal Goals</h1>
+      <form id="personalGoalForm">
+        <input type="text" id="personalGoalInput" placeholder="Add personal goal..." required />
+        <input type="date" id="personalDeadlineInput" required />
+        <button type="submit">Add</button>
+      </form>
+      <ul id="personalGoalList"></ul>
+    </div>
+  </div>
+
+  <script>
+    const ENDPOINT = 'https://api.npoint.io/12c1921d145131570453';
+    let groupGoals = [];
+
+    // Load group goals from API
+    async function fetchGroupGoals() {
+      const res = await fetch(ENDPOINT);
+      const data = await res.json();
+      groupGoals = data.goals;
+      renderGroupGoals();
+    }
+
+    function renderGroupGoals() {
+      const list = document.getElementById('groupGoalList');
+      list.innerHTML = '';
+      groupGoals.forEach((goal, i) => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          <div>
+            <strong>${goal.text}</strong><br>
+            <small>📅 ${goal.deadline}</small>
+          </div>
+          <button onclick="deleteGroupGoal(${i})">❌</button>
+        `;
+        list.appendChild(li);
+      });
+    }
+
+    async function addGroupGoal(e) {
+      e.preventDefault();
+      const text = document.getElementById('groupGoalInput').value;
+      const deadline = document.getElementById('groupDeadlineInput').value;
+      groupGoals.push({ text, deadline });
+      await updateGroupGoalsToAPI();
+      document.getElementById('groupGoalForm').reset();
+    }
+
+    async function deleteGroupGoal(index) {
+      groupGoals.splice(index, 1);
+      await updateGroupGoalsToAPI();
+    }
+
+    async function updateGroupGoalsToAPI() {
+      const res = await fetch(ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ goals: groupGoals })
+      });
+      fetchGroupGoals(); // refresh after update
+    }
+
+    document.getElementById('groupGoalForm').addEventListener('submit', addGroupGoal);
+
+    // IndexedDB for Personal Goals
+    let db;
+    const request = indexedDB.open("PersonalGoalsDB", 1);
+
+    request.onupgradeneeded = function (e) {
+      db = e.target.result;
+      db.createObjectStore("goals", { keyPath: "id", autoIncrement: true });
+    };
+
+    request.onsuccess = function (e) {
+      db = e.target.result;
+      renderPersonalGoals();
+    };
+
+    function addPersonalGoal(e) {
+      e.preventDefault();
+      const text = document.getElementById('personalGoalInput').value;
+      const deadline = document.getElementById('personalDeadlineInput').value;
+
+      const tx = db.transaction("goals", "readwrite");
+      const store = tx.objectStore("goals");
+      store.add({ text, deadline });
+
+      tx.oncomplete = () => {
+        renderPersonalGoals();
+        document.getElementById('personalGoalForm').reset();
+      };
+    }
+
+    function deletePersonalGoal(id) {
+      const tx = db.transaction("goals", "readwrite");
+      const store = tx.objectStore("goals");
+      store.delete(id);
+
+      tx.oncomplete = () => renderPersonalGoals();
+    }
+
+    function renderPersonalGoals() {
+      const list = document.getElementById('personalGoalList');
+      list.innerHTML = '';
+
+      const tx = db.transaction("goals", "readonly");
+      const store = tx.objectStore("goals");
+      const req = store.openCursor();
+
+      req.onsuccess = function (e) {
+        const cursor = e.target.result;
+        if (cursor) {
+          const { id, text, deadline } = cursor.value;
+          const li = document.createElement('li');
+          li.innerHTML = `
+            <div>
+              <strong>${text}</strong><br>
+              <small>📅 ${deadline}</small>
+            </div>
+            <button onclick="deletePersonalGoal(${id})">❌</button>
+          `;
+          list.appendChild(li);
+          cursor.continue();
+        }
+      };
+    }
+
+    document.getElementById('personalGoalForm').addEventListener('submit', addPersonalGoal);
+
+    // Init load
+    fetchGroupGoals();
+  </script>
+</body>
+</html>
