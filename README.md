@@ -19,7 +19,8 @@ A simple yet powerful **Group Goals Tracker** 🎯 that allows multiple people t
 ---
 
 ## 🛠 Tech Stack
-- **Frontend:** HTML, CSS, JavaScript  
+- **Frontend:** HTML, CSS, JavaScript
+- **Storage** www.npoint.io
 - **Syncing Mechanism:** Serverless (no traditional backend)  
 - **Hosting:** GitHub Pages  
 
@@ -29,5 +30,14 @@ A simple yet powerful **Group Goals Tracker** 🎯 that allows multiple people t
 1. Open the [website](https://v3nk47xd.github.io/GroupGoalsTracker/).  
 2. Create or View Public and Private Goals.
 
+---
+
+## ✨ Cloning
+1. Just take the HTML file, its included with css and javascript within.
+2. Go to [website](https://www.npoint.io/) , and create a new json bin.
+3. Copy the endpoint of the json bin.
+4. Paste it in 118th Line of the HTML Document to change the value of variable ENDPOINT.
+
+---
 
 ### 💡 Made with ❤️ by [v3nk47xd](https://github.com/v3nk47xd)
